@@ -1,2 +1,2 @@
 # Bacpipe
-Pipeline for whole genome assembly and analysy for Oxford Nanopore reads
+Pipeline for whole genome assembly and AMR analysis for Oxford Nanopore reads
