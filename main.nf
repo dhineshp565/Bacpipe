@@ -56,3 +56,107 @@ process dragonflye {
     sed -i 's/contig/${SampleName}_contig/g' "${SampleName}_flye-info.txt"
     """
 }
+process abricate {
+	label "high"
+	publishDir "${params.outdir}/abricate",mode:"copy"
+	input:
+	val(SampleName)
+	path(fastafile)
+	output:
+	path("${SampleName}_resfinder.csv"),emit:resfinder
+	path("${SampleName}_CARD.csv"),emit:card
+	path("${SampleName}_megares.csv"),emit:megares
+	path("${SampleName}_ncbi.csv"),emit:ncbi
+	path("${SampleName}_argannot.csv"),emit:argannot
+	path("${SampleName}_vfdb.csv"),emit:vfdb
+	script:
+	"""
+	abricate --db resfinder ${fastafile} > ${SampleName}_resfinder.csv
+	abricate --db card ${fastafile} > ${SampleName}_CARD.csv
+	abricate --db megares ${fastafile} > ${SampleName}_megares.csv
+	abricate --db ncbi ${fastafile} > ${SampleName}_ncbi.csv
+	abricate --db argannot ${fastafile} > ${SampleName}_argannot.csv
+	abricate --db vfdb ${fastafile} > ${SampleName}_vfdb.csv
+	
+	"""
+}
+process abricate_summary {
+	label "high"
+	publishDir "${params.outdir}/abricate_summary",mode:"copy"
+	input:
+	path(resfinder)
+	path(card)
+	path(megares)
+	path(ncbi)
+	path(argannot)
+	path(vfdb)
+	output:
+	path("All_resfinder.csv")
+	path("All_CARD.csv")
+	path("All_megares.csv")
+	path("All_ncbi.csv")
+	path("All_argannot.csv")
+	path("All_vfdb.csv")
+	script:
+	"""
+	abricate --summary ${resfinder} > All_resfinder.csv
+	abricate --summary ${card}> All_CARD.csv
+	abricate --summary ${megares} > All_megares.csv
+	abricate --summary ${ncbi} > All_ncbi.csv
+	abricate --summary ${argannot} > All_argannot.csv
+	abricate --summary ${vfdb} > All_vfdb.csv
+	
+	"""
+}
+process mlst {
+	label "high"
+	publishDir "${params.outdir}/mlst",mode:"copy"
+	input:
+	val(SampleName)
+	path(fastafile)
+	output:
+	path("${SampleName}_MLST.csv")
+	script:
+	"""
+	mlst ${fastafile} > ${SampleName}_MLST.csv
+	"""
+}
+process rgi_amr {
+	label "high"
+	publishDir "${params.outdir}/rgi_amr",mode:"copy"
+	input:
+	val(SampleName)
+	path(fastafile)
+	output:
+	path("${SampleName}_rgi.txt")
+	script:
+	"""
+	rgi main --input_sequence ${fastafile} --output_file ${SampleName}_rgi -t contig --include_loose
+	"""
+
+}
+workflow {
+    data=Channel
+	.fromPath(params.input)
+	.splitCsv(header:true)
+    .map { row-> tuple(row.SampleName,row.SamplePath) }
+     merge_fastq(data)
+    if (params.trim_barcodes){
+		porechop(merge_fastq.out)
+		dragonflye(porechop.out,params.gsize) 
+	} else {
+        dragonflye(merge_fastq.out,params.gsize)           
+    }
+	abricate(dragonflye.out.sample,dragonflye.out.assembly)
+	resfind=abricate.out.resfinder.collect()
+	car=abricate.out.card.collect()
+	mega=abricate.out.megares.collect()
+	ncb=abricate.out.ncbi.collect()
+	arga=abricate.out.argannot.collect()
+	vfd=abricate.out.vfdb.collect()
+	abricate_summary(resfind,car,mega,ncb,arga,vfd)
+	mlst(dragonflye.out.sample,dragonflye.out.assembly)
+	rgi_amr(dragonflye.out.sample,dragonflye.out.assembly)
+
+
+}
