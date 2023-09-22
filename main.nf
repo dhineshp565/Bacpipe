@@ -135,6 +135,96 @@ process rgi_amr {
 	"""
 
 }
+process prokka {
+	label "medium"
+	publishDir "${params.outdir}/prokka",mode: "copy"
+	input:
+	val(SampleName)
+	path(fastafile)
+	output:
+	path ("${SampleName}_prokka")
+	path("${SampleName}_prokka.gff"),emit:gff
+	script:
+	"""
+	prokka --outdir ${SampleName}_prokka --locustag ${SampleName} --prefix ${SampleName} ${fastafile}
+	cat "${SampleName}_prokka"/*.gff > ${SampleName}_prokka.gff
+
+	"""
+}
+process roary{
+	label "high"
+	publishDir "${params.outdir}/roary",mode:"copy"
+	input:
+	path(gff)
+	output:
+	path("Roary")
+	script:
+	"""
+	roary -f Roary ${gff}
+	"""
+
+}
+
+process genotyping_minimap {
+	label "high"
+	publishDir "${params.outdir}/minimap2",mode:"copy"
+	input:
+	val(SampleName)
+	path(fastafile)
+	file(adhesinG)
+	output:
+	val(SampleName)
+	path("${SampleName}.sam")
+	script:
+	"""
+	minimap2 -a ${adhesinG} ${fastafile} > ${SampleName}.sam
+	"""
+}
+process genotyping_samtools {
+	label "high"
+	publishDir "${params.outdir}/samtools",mode:"copy"
+	input:
+	val(SampleName)
+	path(samfile)
+	output:
+	val(SampleName)
+	path("${SampleName}_mappedreads.csv")
+	script:
+	"""
+	samtools view -b -F 256 "${samfile}" > ${SampleName}_mapped.bam
+	samtools index ${SampleName}_mapped.bam
+	samtools idxstats ${SampleName}_mapped.bam > ${SampleName}_idxstats.csv
+	awk '{if (\$3!=0) print \$1,\$2,\$3}' "${SampleName}_idxstats.csv" > ${SampleName}_mappedreads.csv
+	"""
+}
+
+process genotyping_seqkit{
+	label "high"
+	publishDir "${params.outdir}/seqkit",mode:"copy"
+	input:
+	val(SampleName)
+	file(fasta)
+	path(primerfile)
+	output:
+	val(SampleName)
+	path("${SampleName}_seqkit.csv")
+	path("${SampleName}_genotyping_results.csv")
+	script:
+	"""
+	cat ${fasta}|seqkit amplicon -p ${primerfile} --bed > ${SampleName}_seqkit.csv
+	
+
+	if grep -Fq AdhesinG ${SampleName}_seqkit.csv 
+	then
+		echo "${SampleName}	Genotype-2" > ${SampleName}_genotyping_results.csv
+	else
+		echo "${SampleName}	Genotype-1" > ${SampleName}_genotyping_results.csv
+	fi
+	sed -i '1i SampleName	Type' "${SampleName}_genotyping_results.csv"
+	"""
+}
+
+
 workflow {
     data=Channel
 	.fromPath(params.input)
@@ -157,6 +247,12 @@ workflow {
 	abricate_summary(resfind,car,mega,ncb,arga,vfd)
 	mlst(dragonflye.out.sample,dragonflye.out.assembly)
 	rgi_amr(dragonflye.out.sample,dragonflye.out.assembly)
-
-
+	prokka(dragonflye.out.sample,dragonflye.out.assembly)
+	gff=prokka.out.gff.collect()
+	roary(gff)
+	adh=file("${baseDir}/AdhesinG_genotype2_Mannheimiah.fasta")
+	genotyping_minimap(dragonflye.out.sample,dragonflye.out.assembly,adh)
+	genotyping_samtools(genotyping_minimap.out)
+	primerfile=file("${baseDir}/MH_genotypping_primers_geno.tsv")
+	genotyping_seqkit(dragonflye.out.sample,dragonflye.out.assembly,primerfile)
 }
