@@ -223,6 +223,38 @@ process genotyping_seqkit{
 	sed -i '1i SampleName	Type' "${SampleName}_genotyping_results.csv"
 	"""
 }
+process serotyping_seqkit {
+	label "high"
+	publishDir "${params.outdir}/seqkit_sero",mode:"copy"
+	input:
+	val(SampleName)
+	file(fasta)
+	path(sero_primerfile)
+	output:
+	val(SampleName)
+	path("${SampleName}_seqkit_sero.csv")
+	path("${SampleName}_serotyping_results.csv")
+	script:
+	"""
+	cat ${fasta}|seqkit amplicon -p ${sero_primerfile} --bed > ${SampleName}_seqkit_sero.csv
+	
+
+	if grep -Fq "Serotype-1-Hypothetical_protein_Hyp" ${SampleName}_seqkit_sero.csv 
+	then
+		echo "${SampleName}	Serptype-A1" > ${SampleName}_serotyping_results.csv
+	fi
+	if grep -Fq "Serotype-2-Core-2_I-Branching_enzyme_Core2" ${SampleName}_seqkit_sero.csv 
+	then
+		echo "${SampleName}	Serptype-A2" > ${SampleName}_serotyping_results.csv
+	fi
+	if grep -Fq "Serotype-6-TupA-like_ATPgrasp_TupA" ${SampleName}_seqkit_sero.csv 
+	then
+		echo "${SampleName}	Serptype-A6" > ${SampleName}_serotyping_results.csv	
+
+	fi
+	sed -i '1i SampleName	Type' "${SampleName}_serotyping_results.csv"
+	"""
+}
 
 
 workflow {
@@ -253,6 +285,8 @@ workflow {
 	adh=file("${baseDir}/AdhesinG_genotype2_Mannheimiah.fasta")
 	genotyping_minimap(dragonflye.out.sample,dragonflye.out.assembly,adh)
 	genotyping_samtools(genotyping_minimap.out)
-	primerfile=file("${baseDir}/MH_genotypping_primers_geno.tsv")
+	primerfile=file("${baseDir}/MH_genotyping_primers_geno.tsv")
 	genotyping_seqkit(dragonflye.out.sample,dragonflye.out.assembly,primerfile)
+	sero_primerfile=file("${baseDir}/Mannheimia_serotyping_primers.tsv")
+	serotyping_seqkit(dragonflye.out.sample,dragonflye.out.assembly,sero_primerfile)
 }
