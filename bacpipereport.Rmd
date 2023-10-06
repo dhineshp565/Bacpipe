@@ -4,6 +4,7 @@ date: "`r Sys.Date()`"
 output: html_document
 params:
   card: ""
+  card_summary: ""
   geno: ""
   sero: ""
   vf: ""
@@ -25,13 +26,24 @@ knitr::kable(abricate_final,align = "lcccr")
 
 <br>
 
+### Predicted AMR genes summary with coverage
+
+```{r, echo=FALSE}
+
+allabricate <- read.csv(params$card_summary,header = TRUE,sep = "\t")
+knitr::kable(allabricate,col.names = gsub("[.]", " ", names(allabricate)),align = "lcccccr" )
+```
+
+<br>
+
+
 ## Genotyping
 Predicted based on presence(Genotype-2) or absence (Genotype-1) Adhesin G gene.based on this publication Clawson et al. BMC Microbiology (2020) 20:250 https://rdcu.be/dmIsH
 ```{r, echo=FALSE}
 
 genotype_final <- read.csv(params$gen,header = TRUE, sep = '\t')
 
-knitr::kable(genotype_final,align = "lc")
+knitr::kable(genotype_final,align = "lr")
 
 ```
 
@@ -46,7 +58,7 @@ Capsular serotyping of Mannheimia haemolytica serotypes 1, 2, and 6.For more inf
 
 serotype_final <- read.csv(params$sero,header=TRUE,sep = '\t')
 
-knitr::kable(serotype_final,align = "lc")
+knitr::kable(serotype_final,align = "lr")
 
 ```
 

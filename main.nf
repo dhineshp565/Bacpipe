@@ -93,7 +93,7 @@ process abricate_summary {
 	path(vfdb)
 	output:
 	path("All_resfinder.csv")
-	path("All_CARD.csv")
+	path("All_CARD.csv"),emit:card
 	path("All_megares.csv")
 	path("All_ncbi.csv")
 	path("All_argannot.csv")
@@ -106,7 +106,9 @@ process abricate_summary {
 	abricate --summary ${ncbi} > All_ncbi.csv
 	abricate --summary ${argannot} > All_argannot.csv
 	abricate --summary ${vfdb} > All_vfdb.csv
-	
+
+	sed -i 's/#FILE/SampleName/g' "All_CARD.csv"
+	sed -i 's/NUM_FOUND/No\sof\sAMR\sgenes/g' "All_CARD.csv"
 	"""
 }
 process mlst {
@@ -279,6 +281,7 @@ process make_report {
 	publishDir "${params.outdir}/reports",mode:"copy"
 	input:
 	path(rmdfile)
+	path(amr_summary)
 	path(amr)
 	path(geno)
 	path(sero)
@@ -291,12 +294,13 @@ process make_report {
 
 	"""
 	cp ${rmdfile} rmdfile_copy.Rmd
+	cp ${amr_summary} amr_summary.csv
 	cp ${amr} amr.csv
 	cp ${geno} geno.csv
 	cp ${sero} sero.csv
 	cp ${vf} vf.csv
 
-	Rscript -e 'rmarkdown::render(input="rmdfile_copy.Rmd",params=list(card ="amr.csv",geno = "geno.csv",sero= "sero.csv",vf="vf.csv"),output_file="MH_report.html")'
+	Rscript -e 'rmarkdown::render(input="rmdfile_copy.Rmd",params=list(card ="amr.csv",card_summary="amr_summary.csv",geno = "geno.csv",sero= "sero.csv",vf="vf.csv"),output_file="MH_report.html")'
 
 	"""
 
@@ -322,7 +326,7 @@ workflow {
 	ncb=abricate.out.ncbi.collect()
 	arga=abricate.out.argannot.collect()
 	vfd=abricate.out.vfdb.collect()
-	//abricate_summary(resfind,car,mega,ncb,arga,vfd)
+	abricate_summary(resfind,car,mega,ncb,arga,vfd)
 	mlst(dragonflye.out.sample,dragonflye.out.assembly)
 	rgi_amr(dragonflye.out.sample,dragonflye.out.assembly)
 	prokka(dragonflye.out.sample,dragonflye.out.assembly)
@@ -340,5 +344,5 @@ workflow {
 
 	rmdfile=file("${baseDir}/bacpipereport.Rmd")
 	summarize_csv(abricate.out.card.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),seqkit_typing.out.vf.collect())
-	make_report(rmdfile,summarize_csv.out)
+	make_report(rmdfile,abricate_summary.out.card,summarize_csv.out)
 }
