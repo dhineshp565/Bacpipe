@@ -63,6 +63,7 @@ process abricate {
 	val(SampleName)
 	path(fastafile)
 	output:
+	val(SampleName),emit:sample
 	path("${SampleName}_resfinder.csv"),emit:resfinder
 	path("${SampleName}_CARD.csv"),emit:card
 	path("${SampleName}_megares.csv"),emit:megares
@@ -198,62 +199,107 @@ process genotyping_samtools {
 	"""
 }
 
-process genotyping_seqkit{
+process seqkit_typing {
 	label "high"
 	publishDir "${params.outdir}/seqkit",mode:"copy"
 	input:
 	val(SampleName)
 	file(fasta)
-	path(primerfile)
+	path(geno_primerfile)
+	path (sero_primerfile)
+	path(vf_primerfile)
 	output:
-	val(SampleName)
-	path("${SampleName}_seqkit.csv")
-	path("${SampleName}_genotyping_results.csv")
+	val(SampleName),emit:sample
+	path("${SampleName}_seqkit_geno.csv")
+	path("${SampleName}_genotyping_results.csv"),emit:geno
+	path("${SampleName}_seqkit_sero.csv")
+	path("${SampleName}_serotyping_results.csv"),emit:sero
+	path("${SampleName}_seqkit_VF.csv"),emit:vf
+
 	script:
 	"""
-	cat ${fasta}|seqkit amplicon -p ${primerfile} --bed > ${SampleName}_seqkit.csv
+	cat ${fasta}|seqkit amplicon -p ${geno_primerfile} --bed > ${SampleName}_seqkit_geno.csv
 	
 
-	if grep -Fq AdhesinG ${SampleName}_seqkit.csv 
+	if grep -Fq AdhesinG "${SampleName}_seqkit_geno.csv"
 	then
 		echo "${SampleName}	Genotype-2" > ${SampleName}_genotyping_results.csv
 	else
 		echo "${SampleName}	Genotype-1" > ${SampleName}_genotyping_results.csv
 	fi
 	sed -i '1i SampleName	Type' "${SampleName}_genotyping_results.csv"
-	"""
-}
-process serotyping_seqkit {
-	label "high"
-	publishDir "${params.outdir}/seqkit_sero",mode:"copy"
-	input:
-	val(SampleName)
-	file(fasta)
-	path(sero_primerfile)
-	output:
-	val(SampleName)
-	path("${SampleName}_seqkit_sero.csv")
-	path("${SampleName}_serotyping_results.csv")
-	script:
-	"""
+
+
 	cat ${fasta}|seqkit amplicon -p ${sero_primerfile} --bed > ${SampleName}_seqkit_sero.csv
 	
 
-	if grep -Fq "Serotype-1-Hypothetical_protein_Hyp" ${SampleName}_seqkit_sero.csv 
+	if grep -Fq "Serotype-1-Hypothetical_protein_Hyp" "${SampleName}_seqkit_sero.csv"
 	then
-		echo "${SampleName}	Serptype-A1" > ${SampleName}_serotyping_results.csv
+		echo "${SampleName}	Serotype-A1" > ${SampleName}_serotyping_results.csv
 	fi
 	if grep -Fq "Serotype-2-Core-2_I-Branching_enzyme_Core2" ${SampleName}_seqkit_sero.csv 
 	then
-		echo "${SampleName}	Serptype-A2" > ${SampleName}_serotyping_results.csv
+		echo "${SampleName}	Serotype-A2" > ${SampleName}_serotyping_results.csv
 	fi
 	if grep -Fq "Serotype-6-TupA-like_ATPgrasp_TupA" ${SampleName}_seqkit_sero.csv 
 	then
-		echo "${SampleName}	Serptype-A6" > ${SampleName}_serotyping_results.csv	
+		echo "${SampleName}	Serotype-A6" > ${SampleName}_serotyping_results.csv	
 
 	fi
 	sed -i '1i SampleName	Type' "${SampleName}_serotyping_results.csv"
+
+	cat ${fasta}|seqkit amplicon -p ${vf_primerfile} --bed > ${SampleName}_seqkit_VF.csv
 	"""
+}
+process summarize_csv {
+	label "low"
+	publishDir "${params.outdir}/summary",mode:"copy"
+	input:
+	path(card)
+	path(geno)
+	path(sero)
+	path(vf)
+	output:
+	path("card_all.csv")
+	path("geno_all.csv")
+	path("sero_all.csv")
+	path("vf_all.csv")
+	script:
+	"""
+	awk 'FNR==1 && NR!=1 { while (/^#F/) getline; } 1 {print}' ${card} > card_all.csv
+	awk 'FNR==1 && NR!=1 { while (/^SampleName/) getline; } 1 {print}' ${geno} > geno_all.csv
+	awk 'FNR==1 && NR!=1 { while (/^SampleName/) getline; } 1 {print}' ${sero} > sero_all.csv
+	cat ${vf} > vf_all.csv
+	"""
+
+
+}
+process make_report {
+	label "high"
+	publishDir "${params.outdir}/reports",mode:"copy"
+	input:
+	path(rmdfile)
+	path(amr)
+	path(geno)
+	path(sero)
+	path(vf)
+
+	output:
+	path("MH_report.html")
+
+	script:
+
+	"""
+	cp ${rmdfile} rmdfile_copy.Rmd
+	cp ${amr} amr.csv
+	cp ${geno} geno.csv
+	cp ${sero} sero.csv
+	cp ${vf} vf.csv
+
+	Rscript -e 'rmarkdown::render(input="rmdfile_copy.Rmd",params=list(card ="amr.csv",geno = "geno.csv",sero= "sero.csv",vf="vf.csv"),output_file="MH_report.html")'
+
+	"""
+
 }
 
 
@@ -276,17 +322,23 @@ workflow {
 	ncb=abricate.out.ncbi.collect()
 	arga=abricate.out.argannot.collect()
 	vfd=abricate.out.vfdb.collect()
-	abricate_summary(resfind,car,mega,ncb,arga,vfd)
+	//abricate_summary(resfind,car,mega,ncb,arga,vfd)
 	mlst(dragonflye.out.sample,dragonflye.out.assembly)
 	rgi_amr(dragonflye.out.sample,dragonflye.out.assembly)
 	prokka(dragonflye.out.sample,dragonflye.out.assembly)
 	gff=prokka.out.gff.collect()
-	roary(gff)
-	adh=file("${baseDir}/AdhesinG_genotype2_Mannheimiah.fasta")
-	genotyping_minimap(dragonflye.out.sample,dragonflye.out.assembly,adh)
-	genotyping_samtools(genotyping_minimap.out)
-	primerfile=file("${baseDir}/MH_genotyping_primers_geno.tsv")
-	genotyping_seqkit(dragonflye.out.sample,dragonflye.out.assembly,primerfile)
+	//roary(gff)
+	//adh=file("${baseDir}/AdhesinG_genotype2_Mannheimiah.fasta")
+	//genotyping_minimap(dragonflye.out.sample,dragonflye.out.assembly,adh)
+	//genotyping_samtools(genotyping_minimap.out)
+
+
+	geno_primerfile=file("${baseDir}/MH_genotyping_primers_geno.tsv")
 	sero_primerfile=file("${baseDir}/Mannheimia_serotyping_primers.tsv")
-	serotyping_seqkit(dragonflye.out.sample,dragonflye.out.assembly,sero_primerfile)
+	vf_primerfile=file("${baseDir}/MH_VF_primers.tsv")
+	seqkit_typing(dragonflye.out.sample,dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
+
+	rmdfile=file("${baseDir}/bacpipereport.Rmd")
+	summarize_csv(abricate.out.card.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),seqkit_typing.out.vf.collect())
+	make_report(rmdfile,summarize_csv.out)
 }

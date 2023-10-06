@@ -1,0 +1,70 @@
+---
+title: "Mannheimia haemolytica Analysis Report" 
+date: "`r Sys.Date()`"
+output: html_document
+params:
+  card: ""
+  geno: ""
+  sero: ""
+  vf: ""
+  
+---
+
+
+<br>
+
+## Predicted AMR genes from CARD database
+Predicted using abricate tool with CARD database as option. For more info please see https://github.com/tseemann/abricate and https://card.mcmaster.ca/
+```{r, echo=FALSE}
+
+abricate_raw <- read.csv(params$card,header = TRUE,sep = "\t")
+abricate_final <- abricate_raw[,c(2,6,10,11,15)]
+colnames(abricate_final) <- c("SEQUENCE","GENE","%COVERAGE","%IDENTITY","RESISTANCE")
+knitr::kable(abricate_final,align = "lcccr")
+```
+
+<br>
+
+## Genotyping
+Predicted based on presence(Genotype-2) or absence (Genotype-1) Adhesin G gene.based on this publication Clawson et al. BMC Microbiology (2020) 20:250 https://rdcu.be/dmIsH
+```{r, echo=FALSE}
+
+genotype_final <- read.csv(params$gen,header = TRUE, sep = '\t')
+
+knitr::kable(genotype_final,align = "lc")
+
+```
+
+
+<br>
+
+## Capsular Serotyping
+
+Capsular serotyping of Mannheimia haemolytica serotypes 1, 2, and 6.For more info please see https://doi.org/10.1016/j.mimet.2017.05.010
+
+```{r, echo=FALSE}
+
+serotype_final <- read.csv(params$sero,header=TRUE,sep = '\t')
+
+knitr::kable(serotype_final,align = "lc")
+
+```
+
+<br>
+
+## Virulence factors
+
+Virulence factors https://doi.org/10.1111/j.1574-6968.2006.00460.x
+```{r, echo=FALSE}
+
+vf <- read.csv(params$vf,header=FALSE,sep = '\t')
+
+vf_final <- vf[,c(1,4)]
+
+knitr::kable(vf_final,align = "lc")
+
+```
+
+
+
+
