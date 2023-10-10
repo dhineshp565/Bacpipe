@@ -108,6 +108,7 @@ process abricate_summary {
 	abricate --summary ${vfdb} > All_vfdb.csv
 
 	sed -i 's/#FILE/SampleName/g' "All_CARD.csv"
+	
 	sed -i 's/NUM_FOUND/No\sof\sAMR\sgenes/g' "All_CARD.csv"
 	"""
 }
@@ -272,6 +273,7 @@ process summarize_csv {
 	awk 'FNR==1 && NR!=1 { while (/^SampleName/) getline; } 1 {print}' ${geno} > geno_all.csv
 	awk 'FNR==1 && NR!=1 { while (/^SampleName/) getline; } 1 {print}' ${sero} > sero_all.csv
 	cat ${vf} > vf_all.csv
+	sed -i '1i SampleName	Start	End	Virulence_genes	0	Strand	Sequence' "vf_all.csv"
 	"""
 
 

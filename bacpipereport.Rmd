@@ -21,7 +21,7 @@ Predicted using abricate tool with CARD database as option. For more info please
 abricate_raw <- read.csv(params$card,header = TRUE,sep = "\t")
 abricate_final <- abricate_raw[,c(2,6,10,11,15)]
 colnames(abricate_final) <- c("SEQUENCE","GENE","%COVERAGE","%IDENTITY","RESISTANCE")
-knitr::kable(abricate_final,align = "lcccr")
+knitr::kable(abricate_final,align = "llccr")
 ```
 
 <br>
@@ -31,7 +31,7 @@ knitr::kable(abricate_final,align = "lcccr")
 ```{r, echo=FALSE}
 
 allabricate <- read.csv(params$card_summary,header = TRUE,sep = "\t")
-knitr::kable(allabricate,col.names = gsub("[.]", " ", names(allabricate)),align = "lcccccr" )
+knitr::kable(allabricate,col.names = gsub("[.]", " ", names(allabricate)),align = "lcllllr" )
 ```
 
 <br>
@@ -43,7 +43,7 @@ Predicted based on presence(Genotype-2) or absence (Genotype-1) Adhesin G gene.b
 
 genotype_final <- read.csv(params$gen,header = TRUE, sep = '\t')
 
-knitr::kable(genotype_final,align = "lr")
+knitr::kable(genotype_final,align = "ll")
 
 ```
 
@@ -58,7 +58,7 @@ Capsular serotyping of Mannheimia haemolytica serotypes 1, 2, and 6.For more inf
 
 serotype_final <- read.csv(params$sero,header=TRUE,sep = '\t')
 
-knitr::kable(serotype_final,align = "lr")
+knitr::kable(serotype_final,align = "ll")
 
 ```
 
@@ -69,14 +69,11 @@ knitr::kable(serotype_final,align = "lr")
 Virulence factors https://doi.org/10.1111/j.1574-6968.2006.00460.x
 ```{r, echo=FALSE}
 
-vf <- read.csv(params$vf,header=FALSE,sep = '\t')
+vf <- read.csv(params$vf,header=TRUE,sep = '\t')
 
 vf_final <- vf[,c(1,4)]
 
-knitr::kable(vf_final,align = "lc")
+
+knitr::kable(vf_final,align = "ll")
 
 ```
-
-
-
-
