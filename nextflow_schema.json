@@ -32,16 +32,25 @@
                     "fa_icon": "fas fa-folder-open"
                 }
             }
+        },
+        "optional": {
+            "title": "optional",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "trim_barcodes": {
+                    "type": "string"
+                }
+            }
         }
     },
     "allOf": [
         {
             "$ref": "#/definitions/input_output_options"
+        },
+        {
+            "$ref": "#/definitions/optional"
         }
-    ],
-    "properties": {
-        "trim_barcodes": {
-            "type": "string"
-        }
-    }
+    ]
 }
