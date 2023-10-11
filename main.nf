@@ -49,7 +49,7 @@ process dragonflye {
 	path("${SampleName}_flye-info.txt"),emit:flyeinfo
     script:
     """
-    dragonflye --reads ${SamplePath} --outdir ${SampleName}_assembly --model r1041_e82_400bps_sup_g615 --gsize ${gsize} --nanohq --medaka 1
+    dragonflye --reads ${SamplePath} --outdir ${SampleName}_assembly --model r1041_e82_400bps_sup_g615 --gsize 2.4M --nanohq --medaka 1
     mv "${SampleName}_assembly"/flye.fasta "${SampleName}"_flye.fasta
     sed -i 's/contig/${SampleName}_contig/g' "${SampleName}_flye.fasta"
     mv "${SampleName}_assembly"/flye-info.txt "${SampleName}"_flye-info.txt
