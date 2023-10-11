@@ -64,141 +64,24 @@ process abricate {
 	path(fastafile)
 	output:
 	val(SampleName),emit:sample
-	path("${SampleName}_resfinder.csv"),emit:resfinder
 	path("${SampleName}_CARD.csv"),emit:card
-	path("${SampleName}_megares.csv"),emit:megares
-	path("${SampleName}_ncbi.csv"),emit:ncbi
-	path("${SampleName}_argannot.csv"),emit:argannot
-	path("${SampleName}_vfdb.csv"),emit:vfdb
 	script:
 	"""
-	abricate --db resfinder ${fastafile} > ${SampleName}_resfinder.csv
 	abricate --db card ${fastafile} > ${SampleName}_CARD.csv
-	abricate --db megares ${fastafile} > ${SampleName}_megares.csv
-	abricate --db ncbi ${fastafile} > ${SampleName}_ncbi.csv
-	abricate --db argannot ${fastafile} > ${SampleName}_argannot.csv
-	abricate --db vfdb ${fastafile} > ${SampleName}_vfdb.csv
-	
 	"""
 }
 process abricate_summary {
 	label "high"
 	publishDir "${params.outdir}/abricate_summary",mode:"copy"
 	input:
-	path(resfinder)
 	path(card)
-	path(megares)
-	path(ncbi)
-	path(argannot)
-	path(vfdb)
 	output:
-	path("All_resfinder.csv")
 	path("All_CARD.csv"),emit:card
-	path("All_megares.csv")
-	path("All_ncbi.csv")
-	path("All_argannot.csv")
-	path("All_vfdb.csv")
 	script:
 	"""
-	abricate --summary ${resfinder} > All_resfinder.csv
 	abricate --summary ${card}> All_CARD.csv
-	abricate --summary ${megares} > All_megares.csv
-	abricate --summary ${ncbi} > All_ncbi.csv
-	abricate --summary ${argannot} > All_argannot.csv
-	abricate --summary ${vfdb} > All_vfdb.csv
-
 	sed -i 's/#FILE/SampleName/g' "All_CARD.csv"
-	
 	sed -i 's/NUM_FOUND/No\sof\sAMR\sgenes/g' "All_CARD.csv"
-	"""
-}
-process mlst {
-	label "high"
-	publishDir "${params.outdir}/mlst",mode:"copy"
-	input:
-	val(SampleName)
-	path(fastafile)
-	output:
-	path("${SampleName}_MLST.csv")
-	script:
-	"""
-	mlst ${fastafile} > ${SampleName}_MLST.csv
-	"""
-}
-process rgi_amr {
-	label "high"
-	publishDir "${params.outdir}/rgi_amr",mode:"copy"
-	input:
-	val(SampleName)
-	path(fastafile)
-	output:
-	path("${SampleName}_rgi.txt")
-	script:
-	"""
-	rgi main --input_sequence ${fastafile} --output_file ${SampleName}_rgi -t contig --include_loose
-	"""
-
-}
-process prokka {
-	label "medium"
-	publishDir "${params.outdir}/prokka",mode: "copy"
-	input:
-	val(SampleName)
-	path(fastafile)
-	output:
-	path ("${SampleName}_prokka")
-	path("${SampleName}_prokka.gff"),emit:gff
-	script:
-	"""
-	prokka --outdir ${SampleName}_prokka --locustag ${SampleName} --prefix ${SampleName} ${fastafile}
-	cat "${SampleName}_prokka"/*.gff > ${SampleName}_prokka.gff
-
-	"""
-}
-process roary{
-	label "high"
-	publishDir "${params.outdir}/roary",mode:"copy"
-	input:
-	path(gff)
-	output:
-	path("Roary")
-	script:
-	"""
-	roary -f Roary ${gff}
-	"""
-
-}
-
-process genotyping_minimap {
-	label "high"
-	publishDir "${params.outdir}/minimap2",mode:"copy"
-	input:
-	val(SampleName)
-	path(fastafile)
-	file(adhesinG)
-	output:
-	val(SampleName)
-	path("${SampleName}.sam")
-	script:
-	"""
-	minimap2 -a ${adhesinG} ${fastafile} > ${SampleName}.sam
-	"""
-}
-process genotyping_samtools {
-	label "high"
-	publishDir "${params.outdir}/samtools",mode:"copy"
-	input:
-	val(SampleName)
-	path(samfile)
-	output:
-	val(SampleName)
-	path("${SampleName}_mappedreads.csv")
-	script:
-	"""
-	samtools view -b -F 256 "${samfile}" > ${SampleName}_mapped.bam
-	samtools index ${SampleName}_mapped.bam
-	samtools idxstats ${SampleName}_mapped.bam > ${SampleName}_idxstats.csv
-	awk '{if (\$3!=0) print \$1,\$2,\$3}' "${SampleName}_idxstats.csv" > ${SampleName}_mappedreads.csv
 	"""
 }
 
@@ -322,28 +205,12 @@ workflow {
         dragonflye(merge_fastq.out,params.gsize)           
     }
 	abricate(dragonflye.out.sample,dragonflye.out.assembly)
-	resfind=abricate.out.resfinder.collect()
-	car=abricate.out.card.collect()
-	mega=abricate.out.megares.collect()
-	ncb=abricate.out.ncbi.collect()
-	arga=abricate.out.argannot.collect()
-	vfd=abricate.out.vfdb.collect()
-	abricate_summary(resfind,car,mega,ncb,arga,vfd)
-	mlst(dragonflye.out.sample,dragonflye.out.assembly)
-	rgi_amr(dragonflye.out.sample,dragonflye.out.assembly)
-	prokka(dragonflye.out.sample,dragonflye.out.assembly)
-	gff=prokka.out.gff.collect()
-	//roary(gff)
-	//adh=file("${baseDir}/AdhesinG_genotype2_Mannheimiah.fasta")
-	//genotyping_minimap(dragonflye.out.sample,dragonflye.out.assembly,adh)
-	//genotyping_samtools(genotyping_minimap.out)
-
-
+	card=abricate.out.card.collect()
+	abricate_summary(card)
 	geno_primerfile=file("${baseDir}/MH_genotyping_primers_geno.tsv")
 	sero_primerfile=file("${baseDir}/Mannheimia_serotyping_primers.tsv")
 	vf_primerfile=file("${baseDir}/MH_VF_primers.tsv")
 	seqkit_typing(dragonflye.out.sample,dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
-
 	rmdfile=file("${baseDir}/MH_report.Rmd")
 	summarize_csv(abricate.out.card.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),seqkit_typing.out.vf.collect())
 	make_report(rmdfile,abricate_summary.out.card,summarize_csv.out)
