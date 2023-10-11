@@ -50,8 +50,11 @@ process dragonflye {
     script:
     """
     dragonflye --reads ${SamplePath} --outdir ${SampleName}_assembly --model r1041_e82_400bps_sup_g615 --gsize 2.4M --nanohq --medaka 1
+    # rename fasta file with samplename
     mv "${SampleName}_assembly"/flye.fasta "${SampleName}"_flye.fasta
+    # rename fasta header with samplename
     sed -i 's/contig/${SampleName}_contig/g' "${SampleName}_flye.fasta"
+     # rename flyeinfo file and contnents
     mv "${SampleName}_assembly"/flye-info.txt "${SampleName}"_flye-info.txt
     sed -i 's/contig/${SampleName}_contig/g' "${SampleName}_flye-info.txt"
     """
@@ -80,6 +83,7 @@ process abricate_summary {
 	script:
 	"""
 	abricate --summary ${card}> All_CARD.csv
+	# Change header of the summary file
 	sed -i 's/#FILE/SampleName/g' "All_CARD.csv"
 	sed -i 's/NUM_FOUND/No\sof\sAMR\sgenes/g' "All_CARD.csv"
 	"""
@@ -104,6 +108,7 @@ process seqkit_typing {
 
 	script:
 	"""
+	# genotyping using AdhesinG primers
 	cat ${fasta}|seqkit amplicon -p ${geno_primerfile} --bed > ${SampleName}_seqkit_geno.csv
 	
 
@@ -115,6 +120,7 @@ process seqkit_typing {
 	fi
 	sed -i '1i SampleName	Type' "${SampleName}_genotyping_results.csv"
 
+	# Serotyping A1,A2,And A6 using multiplex primers
 
 	cat ${fasta}|seqkit amplicon -p ${sero_primerfile} --bed > ${SampleName}_seqkit_sero.csv
 	
@@ -133,6 +139,8 @@ process seqkit_typing {
 
 	fi
 	sed -i '1i SampleName	Type' "${SampleName}_serotyping_results.csv"
+
+	# Virulence factors using VF primers
 
 	cat ${fasta}|seqkit amplicon -p ${vf_primerfile} --bed > ${SampleName}_seqkit_VF.csv
 	"""
@@ -197,6 +205,7 @@ workflow {
 	.fromPath(params.input)
 	.splitCsv(header:true)
     .map { row-> tuple(row.SampleName,row.SamplePath) }
+
      merge_fastq(data)
     if (params.trim_barcodes){
 		porechop(merge_fastq.out)
