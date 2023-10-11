@@ -344,7 +344,7 @@ workflow {
 	vf_primerfile=file("${baseDir}/MH_VF_primers.tsv")
 	seqkit_typing(dragonflye.out.sample,dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
 
-	rmdfile=file("${baseDir}/bacpipereport.Rmd")
+	rmdfile=file("${baseDir}/MH_report.Rmd")
 	summarize_csv(abricate.out.card.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),seqkit_typing.out.vf.collect())
 	make_report(rmdfile,abricate_summary.out.card,summarize_csv.out)
 }
