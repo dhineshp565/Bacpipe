@@ -42,7 +42,6 @@ process dragonflye {
     publishDir "${params.outdir}/Assembly",mode:"copy"
     input:
     tuple val(SampleName),path(SamplePath)
-    val(gsize)
     output:
     val(SampleName),emit:sample
 	path("${SampleName}_flye.fasta"),emit:assembly
@@ -207,13 +206,13 @@ workflow {
     .map { row-> tuple(row.SampleName,row.SamplePath) }
 	// Merge fastq files for each sample
      merge_fastq(data)
-	 
+
 	// based on the optional argument trim barcodes using porechop and assemble using dragonflye
     if (params.trim_barcodes){
 		porechop(merge_fastq.out)
-		dragonflye(porechop.out,params.gsize) 
+		dragonflye(porechop.out) 
 	} else {
-        dragonflye(merge_fastq.out,params.gsize)           
+        dragonflye(merge_fastq.out)           
     }
 
 	//AMR gene finding using abricate and CARD database
