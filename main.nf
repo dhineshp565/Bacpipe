@@ -205,22 +205,31 @@ workflow {
 	.fromPath(params.input)
 	.splitCsv(header:true)
     .map { row-> tuple(row.SampleName,row.SamplePath) }
-
+	// Merge fastq files for each sample
      merge_fastq(data)
+	 
+	// based on the optional argument trim barcodes using porechop and assemble using dragonflye
     if (params.trim_barcodes){
 		porechop(merge_fastq.out)
 		dragonflye(porechop.out,params.gsize) 
 	} else {
         dragonflye(merge_fastq.out,params.gsize)           
     }
+
+	//AMR gene finding using abricate and CARD database
 	abricate(dragonflye.out.sample,dragonflye.out.assembly)
 	card=abricate.out.card.collect()
 	abricate_summary(card)
+
+	// genotyping serotyping and virulence typing using seqkit amplicon
 	geno_primerfile=file("${baseDir}/MH_genotyping_primers_geno.tsv")
 	sero_primerfile=file("${baseDir}/Mannheimia_serotyping_primers.tsv")
 	vf_primerfile=file("${baseDir}/MH_VF_primers.tsv")
 	seqkit_typing(dragonflye.out.sample,dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
+
 	rmdfile=file("${baseDir}/MH_report.Rmd")
+	// summarize all AMR abd typing data
 	summarize_csv(abricate.out.card.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),seqkit_typing.out.vf.collect())
+	// mahe rmarkdown report from the the summarised files
 	make_report(rmdfile,abricate_summary.out.card,summarize_csv.out)
 }
