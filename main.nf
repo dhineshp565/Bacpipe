@@ -2,7 +2,7 @@
 nextflow.enable.dsl=2
 
 process make_csv {
-	publishDir "${params.outdir}"
+	publishDir "${params.outdir}/csv",mode:"copy"
 	input:
 	path(fastq_input)
 	output:
@@ -44,7 +44,7 @@ process merge_fastq {
 }
 process porechop {
 	label "medium"
-	publishDir "${params.outdir}/trimmed",mode:"copy",overwrite: false
+	publishDir "${params.outdir}/trimmed",mode:"copy"
 	input:
 	tuple val(SampleName),path(SamplePath)
 	output:
@@ -87,6 +87,11 @@ process abricate {
 	script:
 	"""
 	abricate --db card ${fastafile} > ${SampleName}_CARD.csv
+	numblines=\$(< "${SampleName}_CARD.csv" wc -l)
+	if [ \${numblines} -lt 2 ]
+	then
+		echo "No AMR Genes Found" >> "${SampleName}_CARD.csv"
+	fi
 	"""
 }
 process abricate_summary {
@@ -124,6 +129,7 @@ process seqkit_typing {
 
 	script:
 	"""
+
 	# genotyping using AdhesinG primers
 	cat ${fasta}|seqkit amplicon -p ${geno_primerfile} --bed > ${SampleName}_seqkit_geno.csv
 	
@@ -134,7 +140,7 @@ process seqkit_typing {
 	else
 		echo "${SampleName}	Genotype-1" > ${SampleName}_genotyping_results.csv
 	fi
-	sed -i '1i SampleName	Type' "${SampleName}_genotyping_results.csv"
+	sed -i '1i SampleName	Genotype' "${SampleName}_genotyping_results.csv"
 
 	# Serotyping A1,A2,And A6 using multiplex primers
 
@@ -154,11 +160,12 @@ process seqkit_typing {
 		echo "${SampleName}	Serotype-A6" > ${SampleName}_serotyping_results.csv	
 
 	fi
-	sed -i '1i SampleName	Type' "${SampleName}_serotyping_results.csv"
+	sed -i '1i SampleName	Serotype' "${SampleName}_serotyping_results.csv"
 
 	# Virulence factors using VF primers
 
 	cat ${fasta}|seqkit amplicon -p ${vf_primerfile} --bed > ${SampleName}_seqkit_VF.csv
+	sed -i '1i SampleName	Start	End	Virulence genes	0	Strand	Sequence' "${SampleName}_seqkit_VF.csv"
 	"""
 }
 process summarize_csv {
@@ -170,17 +177,14 @@ process summarize_csv {
 	path(sero)
 	path(vf)
 	output:
-	path("card_all.csv")
-	path("geno_all.csv")
-	path("sero_all.csv")
-	path("vf_all.csv")
+	path ("typing_results")
 	script:
 	"""
-	awk 'FNR==1 && NR!=1 { while (/^#F/) getline; } 1 {print}' ${card} > card_all.csv
-	awk 'FNR==1 && NR!=1 { while (/^SampleName/) getline; } 1 {print}' ${geno} > geno_all.csv
-	awk 'FNR==1 && NR!=1 { while (/^SampleName/) getline; } 1 {print}' ${sero} > sero_all.csv
-	cat ${vf} > vf_all.csv
-	sed -i '1i SampleName	Start	End	Virulence_genes	0	Strand	Sequence' "vf_all.csv"
+	mkdir typing_results
+	cp ${card} typing_results/
+	cp ${geno} typing_results/
+	cp ${sero} typing_results/
+	cp ${vf} typing_results/
 	"""
 
 
@@ -190,27 +194,21 @@ process make_report {
 	publishDir "${params.outdir}/reports",mode:"copy"
 	input:
 	path(rmdfile)
-	path(amr_summary)
-	path(amr)
-	path(geno)
-	path(sero)
-	path(vf)
+	path(types)
+	path(csv)
 
 	output:
-	path("MH_report.html")
+	path("MH_tabbed_report.html")
 
 	script:
 
 	"""
+	
 	cp ${rmdfile} rmdfile_copy.Rmd
-	cp ${amr_summary} amr_summary.csv
-	cp ${amr} amr.csv
-	cp ${geno} geno.csv
-	cp ${sero} sero.csv
-	cp ${vf} vf.csv
+	cp ${types}/* ./
+	cp ${csv} sample.csv
 
-	Rscript -e 'rmarkdown::render(input="rmdfile_copy.Rmd",params=list(card ="amr.csv",card_summary="amr_summary.csv",geno = "geno.csv",sero= "sero.csv",vf="vf.csv"),output_file="MH_report.html")'
-
+	Rscript -e 'rmarkdown::render(input="rmdfile_copy.Rmd",params=list(csv="sample.csv"),output_file="MH_tabbed_report.html")'
 	"""
 
 }
@@ -240,10 +238,9 @@ workflow {
 	sero_primerfile=file("${baseDir}/Mannheimia_serotyping_primers.tsv")
 	vf_primerfile=file("${baseDir}/MH_VF_primers.tsv")
 	seqkit_typing(dragonflye.out.sample,dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
-
-	rmdfile=file("${baseDir}/MH_report.Rmd")
+	rmdfile=file("${baseDir}/MH_tabbed_report.Rmd")
 	// summarize all AMR abd typing data
 	summarize_csv(abricate.out.card.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),seqkit_typing.out.vf.collect())
-	// mahe rmarkdown report from the the summarised files
-	make_report(rmdfile,abricate_summary.out.card,summarize_csv.out)
+	// make rmarkdown report from the the summarised files
+	make_report(rmdfile,summarize_csv.out,make_csv.out)
 }

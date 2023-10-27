@@ -1,0 +1,47 @@
+---
+title: "Mannheimia haemolytica Typing Report" 
+date: "`r Sys.Date()`"
+output: html_document
+params:
+  csv: ""
+  
+---
+
+```{css, echo = FALSE}
+  .nav-pills>li>a:hover, .nav-pills>li>a:focus, .nav-pills>li.active>a,     .nav-pills>li.active>a:hover, .nav-pills>li.active>a:focus{
+     background-color: darkblue;
+     }
+```
+
+<br>
+
+
+### RESULTS {.tabset .tabset-pills}
+```{r, results='asis',echo=FALSE}
+samplelist <- read.csv(params$csv,header=FALSE,sep = ',')[-1,]
+sampleid <- samplelist[,c(1)]
+
+for (i in sampleid){
+  
+  
+  cat("####", i, "\n")
+  card_id <- (paste(i,"_CARD.csv",sep=""))
+  geno_id <- (paste(i,"_genotyping_results.csv",sep=""))
+  sero_id <- (paste(i,"_serotyping_results.csv",sep=""))
+  viro_id <- (paste(i,"_seqkit_VF.csv",sep=""))
+  abricate_raw <- read.csv(card_id,header = TRUE,sep = "\t")
+  abricate_final <- abricate_raw[,c(2,6,10,11,15)]
+  colnames(abricate_final) <- c("SEQUENCE","GENE","%COVERAGE","%IDENTITY","RESISTANCE")
+  print(knitr::kable(abricate_final,align = "llccr",caption = "AMR GENES - \n Predicted using abricate tool with CARD database as option. For more info please see https://github.com/tseemann/abricate and https://card.mcmaster.ca/"))
+  genotype_final <- read.csv(geno_id,header = TRUE, sep = '\t')
+  print(knitr::kable(genotype_final,align = "ll",caption="GENOTYPE - Predicted based on presence(Genotype-2) or absence (Genotype-1) Adhesin G gene.based on this publication Clawson et al. BMC Microbiology (2020) 20:250 https://rdcu.be/dmIsH"))
+  serotype_final <- read.csv(sero_id,header=TRUE,sep = '\t')
+  print(knitr::kable(serotype_final,align = "ll",caption="CAPSULAR SEROTYPE - Capsular serotyping of Mannheimia haemolytica serotypes 1, 2, and 6.For more info please see https://doi.org/10.1016/j.mimet.2017.05.010"))
+  vf <- read.csv(viro_id,header=TRUE,sep = '\t')
+  vf_final <- vf[,c(1,4)]
+  print(knitr::kable(vf_final,align = "ll",caption="VIRULENCE GENES - Virulence factors based on  https://doi.org/10.1111/j.1574-6968.2006.00460.x"))
+  cat("\n")
+  
+}
+```
+<br>
