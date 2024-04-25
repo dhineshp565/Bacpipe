@@ -25,14 +25,14 @@ for (i in sampleid){
   
   
   cat("####", i, "\n")
-  card_id <- (paste(i,"_CARD.csv",sep=""))
+  card_id <- (paste(i,"_CARD.txt",sep=""))
   geno_id <- (paste(i,"_genotyping_results.csv",sep=""))
   sero_id <- (paste(i,"_serotyping_results.csv",sep=""))
   viro_id <- (paste(i,"_seqkit_VF.csv",sep=""))
-  abricate_raw <- read.csv(card_id,header = TRUE,sep = "\t")
-  abricate_final <- abricate_raw[,c(2,6,10,11,15)]
-  colnames(abricate_final) <- c("SEQUENCE","GENE","%COVERAGE","%IDENTITY","RESISTANCE")
-  print(knitr::kable(abricate_final,align = "llccr",caption = "AMR GENES - \n Predicted using abricate tool with CARD database as option. For more info please see https://github.com/tseemann/abricate and https://card.mcmaster.ca/"))
+  abricate_raw <- read.csv(card_id,header = TRUE, sep = '\t')
+  abricate_final <- abricate_raw[,c(2,6,14,10,11,15)]
+  colnames(abricate_final) <- c("SEQUENCE","GENE","DESCRIPTION","%COVERAGE","%IDENTITY","RESISTANCE")
+  print(knitr::kable(abricate_final,align = "lllccr",caption = "AMR GENES - \n Predicted using abricate tool with CARD database as option. For more info please see https://github.com/tseemann/abricate and https://card.mcmaster.ca/"))
   genotype_final <- read.csv(geno_id,header = TRUE, sep = '\t')
   print(knitr::kable(genotype_final,align = "ll",caption="GENOTYPE - Predicted based on presence(Genotype-2) or absence (Genotype-1) Adhesin G gene.based on this publication Clawson et al. BMC Microbiology (2020) 20:250 https://rdcu.be/dmIsH"))
   serotype_final <- read.csv(sero_id,header=TRUE,sep = '\t')
