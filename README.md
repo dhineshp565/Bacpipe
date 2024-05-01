@@ -8,8 +8,8 @@ nextflow run main.nf --input sampleslist.csv --out_dir Results_mannheimia_2 --tr
 ```
 Parameters:
 
---input		csv file with two columns with headers(SampleName,SamplePath).See samplelist.csv
---out_dir	Output directory
+--input		Path to directory containing sub-directory with fastq files
+--out_dir	Path to Output directory
 
 optional
 --trim_barcodes barcode and adapter trimming using porechop
