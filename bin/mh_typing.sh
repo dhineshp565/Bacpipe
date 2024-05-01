@@ -11,7 +11,7 @@
 cat $2|seqkit amplicon -p $3 --bed > $1_seqkit_geno.csv
 	
 
-if grep -Fq AdhesinG "$1_seqkit_geno.csv"
+if grep -Fq "AdhesinG" "$1_seqkit_geno.csv"
 then
 	echo "$1	Genotype-2" > $1_genotyping_results.csv
 else
