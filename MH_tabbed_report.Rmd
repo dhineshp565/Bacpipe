@@ -7,17 +7,34 @@ params:
   
 ---
 
+
 ```{css, echo = FALSE}
+
   .nav-pills>li>a:hover, .nav-pills>li>a:focus, .nav-pills>li.active>a,     .nav-pills>li.active>a:hover, .nav-pills>li.active>a:focus{
      background-color: darkblue;
      }
+  body {
+    width: 1000px;
+    max-width: 100%;
+    margin: 0 auto;
+    
+  }
+  .table {
+    width: 100%;
+    max-width: 145%;
+    
+   }  
+  .table caption {
+    color: darkblue;
+    font-weight: bold;
+}
 ```
-
 <br>
 
 
 ### RESULTS {.tabset .tabset-pills}
 ```{r, results='asis',echo=FALSE}
+
 samplelist <- read.csv(params$csv,header=FALSE,sep = ',')[-1,]
 sampleid <- samplelist[,c(1)]
 
@@ -28,20 +45,42 @@ for (i in sampleid){
   card_id <- (paste(i,"_CARD.txt",sep=""))
   geno_id <- (paste(i,"_genotyping_results.csv",sep=""))
   sero_id <- (paste(i,"_serotyping_results.csv",sep=""))
-  viro_id <- (paste(i,"_seqkit_VF.csv",sep=""))
+  viro_id <- (paste(i,"_VF.txt",sep=""))
+  ice_id <- (paste(i,"_ICE.txt",sep=""))
+  type_id <- (paste(i,"_type.txt",sep=""))
+
+
+  type_raw <- read.csv(type_id,header=TRUE,sep = '\t')
+  print(knitr::kable(type_raw,align = "lccl",caption="TYPING - Mannheimia haemolytica typing based on the presence of the AdhesinG and serotyping genes. For more info please see https://rdcu.be/dmIsH and https://doi.org/10.1016/j.mimet.2017.05.010"))
+ 
   abricate_raw <- read.csv(card_id,header = TRUE, sep = '\t')
-  abricate_final <- abricate_raw[,c(2,6,14,10,11,15)]
-  colnames(abricate_final) <- c("SEQUENCE","GENE","DESCRIPTION","%COVERAGE","%IDENTITY","RESISTANCE")
-  print(knitr::kable(abricate_final,align = "lllccr",caption = "AMR GENES - \n Predicted using abricate tool with CARD database as option. For more info please see https://github.com/tseemann/abricate and https://card.mcmaster.ca/"))
-  genotype_final <- read.csv(geno_id,header = TRUE, sep = '\t')
-  print(knitr::kable(genotype_final,align = "ll",caption="GENOTYPE - Predicted based on presence(Genotype-2) or absence (Genotype-1) Adhesin G gene.based on this publication Clawson et al. BMC Microbiology (2020) 20:250 https://rdcu.be/dmIsH"))
-  serotype_final <- read.csv(sero_id,header=TRUE,sep = '\t')
-  print(knitr::kable(serotype_final,align = "ll",caption="CAPSULAR SEROTYPE - Capsular serotyping of Mannheimia haemolytica serotypes 1, 2, and 6.For more info please see https://doi.org/10.1016/j.mimet.2017.05.010"))
-  vf <- read.csv(viro_id,header=TRUE,sep = '\t')
-  vf_final <- vf[,c(1,4)]
-  print(knitr::kable(vf_final,align = "ll",caption="VIRULENCE GENES - Virulence factors based on  https://doi.org/10.1111/j.1574-6968.2006.00460.x"))
+  abricate_final <- abricate_raw[,c(1,6,10,11,15)]
+  colnames(abricate_final) <- c("SEQUENCE","GENE","%COVERAGE","%IDENTITY","RESISTANCE")
+  abricate_desc <- abricate_raw[,c(6,14)]
+  colnames(abricate_desc) <- c("GENE","ARG DESCRIPTION")
+  print(knitr::kable(abricate_final,align = "llcccl",caption = "AMR GENES -Predicted using abricate tool with CARD database as option. For more info please see https://github.com/tseemann/abricate and https://card.mcmaster.ca/"))
+  print(knitr::kable(abricate_desc,align = "ll",col.names = c("<center>GENE</center>","<center>ARG Description</center>"),caption= "ARG DESCRIPTION - \n Description of the predicted AMR genes."))
+
+
+  ice_raw <- read.csv(ice_id,header = TRUE, sep = '\t')
+  ice_final <- ice_raw[,c(1,6,10,11,14)]
+  colnames(ice_final) <- c("SEQUENCE","GENE","%COVERAGE","%IDENTITY","DESCRIPTION")
+  print(knitr::kable(ice_final,align = "llccl",caption = "Integrative and conjugative elements (ICEs - \n Predicted using abricate tool with selected sequences from ICEBERG database as option. For more info please see https://github.com/tseemann/abricate and https://bioinfo-mml.sjtu.edu.cn/ICEberg2/index.php"))
+  
+  
+  vf_raw <- read.csv(viro_id,header=TRUE,sep = '\t')
+  vf_final <- vf_raw[,c(1,10,11,15,14)]
+  colnames(vf_final) <- c("SEQUENCE","%COVERAGE","%IDENTITY","VIRULENCE GENE","FUNCTION")
+  print(knitr::kable(vf_final,align = "lccll",caption="VIRULENCE GENES - Virulence factors based on  https://doi.org/10.1111/j.1574-6968.2006.00460.x and https://doi.org/10.1016/j.micpath.2021.104791"))
   cat("\n")
+  
   
 }
 ```
 <br>
+
+
+
+
+
+

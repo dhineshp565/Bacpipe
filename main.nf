@@ -90,28 +90,17 @@ process abricate {
 	input:
 	tuple val(SampleName),path(fastafile)
 	path (custom_description)
+	path (dbdir)
 	output:
 	val(SampleName),emit:sample
 	path("${SampleName}_CARD.csv"),emit:card
 	path("${SampleName}_CARD.txt"),emit:cardtxt
-	path("${SampleName}_VF.csv"),emit:vf
-	shell:
+	path("${SampleName}_VF.txt"),emit:vf
+	path("${SampleName}_ICE.txt"),emit:ice
+	path("${SampleName}_type.txt"),emit:typing
+	script:
 	"""
-	abricate --db card ${fastafile} > ${SampleName}_CARD.csv
-
-	abricate --db vfdb ${fastafile} > ${SampleName}_VF.csv
-
-	# Check if no AMR genes found
-	numblines=\$(< "${SampleName}_CARD.csv" wc -l)
-	if [ \${numblines} -gt 1 ]
-	then
-		AMR_description.py "${custom_description}" "${SampleName}_CARD.csv" "${SampleName}"
-	else 
-		echo "No AMR Genes Found" >> "${SampleName}_CARD.csv"
-		cp "${SampleName}_CARD.csv" "${SampleName}_CARD.txt"
-	fi
-
-	
+	MH_abricate.sh ${fastafile} ${SampleName} ${custom_description} ${dbdir}
 	"""
 }
 
@@ -160,6 +149,8 @@ process summarize_csv {
 	path(geno)
 	path(sero)
 	path(vf)
+	path(ice)
+	path (type)
 	output:
 	path ("typing_results")
 	script:
@@ -169,6 +160,8 @@ process summarize_csv {
 	cp ${geno} typing_results/
 	cp ${sero} typing_results/
 	cp ${vf} typing_results/
+	cp ${ice} typing_results/
+	cp ${type} typing_results/
 	"""
 
 
@@ -211,10 +204,10 @@ workflow {
 	} else {
         dragonflye(merge_fastq.out,params.medaka_model)           
     }
-
+	abricate_db="${baseDir}/Mhaemolytica_db"
 	AMR_description=file("${baseDir}/AMR_descriptions.txt")
 	//AMR gene finding using abricate and CARD database
-	abricate(dragonflye.out.assembly,AMR_description)
+	abricate(dragonflye.out.assembly,AMR_description,abricate_db)
 	card=abricate.out.card.collect()
 	abricate_summary(card)
 	//custom_description(abricate.out.sample,abricate.out.card,AMR_description)
@@ -226,7 +219,7 @@ workflow {
 	seqkit_typing(dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
 	rmdfile=file("${baseDir}/MH_tabbed_report.Rmd")
 	// summarize all AMR abd typing data
-	summarize_csv(abricate.out.cardtxt.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),seqkit_typing.out.vf.collect())
+	summarize_csv(abricate.out.cardtxt.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),abricate.out.vf.collect(),abricate.out.ice.collect(),abricate.out.typing.collect())
 	// make rmarkdown report from the the summarised files
 	make_report(rmdfile,summarize_csv.out,make_csv.out)
 }
