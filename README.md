@@ -3,15 +3,14 @@ Pipeline for whole genome assembly and AMR analysis of Mannheimia haemolytica fo
 
 Usage
 ```
-nextflow run main.nf --input sampleslist.csv --outdir Results_mannheimia_2 -profile docker --gsize 2.0M --trim_barcodes
+nextflow run main.nf --input sampleslist.csv --out_dir Results_mannheimia_2 --trim_barcodes
 ```
 ```
 Parameters:
 
 --input		csv file with two columns with headers(SampleName,SamplePath).See samplelist.csv
---outdir	Output directory
---gsize 	genome size
---profile    	docker
+--out_dir	Output directory
+
 optional
 --trim_barcodes barcode and adapter trimming using porechop
 ``
