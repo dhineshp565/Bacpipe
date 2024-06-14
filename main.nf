@@ -216,7 +216,7 @@ workflow {
 	geno_primerfile=file("${baseDir}/MH_genotyping_primers_geno.tsv")
 	sero_primerfile=file("${baseDir}/Mannheimia_serotyping_primers.tsv")
 	vf_primerfile=file("${baseDir}/MH_VF_primers.tsv")
-	seqkit_typing(dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
+	//seqkit_typing(dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
 	rmdfile=file("${baseDir}/MH_tabbed_report.Rmd")
 	// summarize all AMR abd typing data
 	summarize_csv(abricate.out.cardtxt.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),abricate.out.vf.collect(),abricate.out.ice.collect(),abricate.out.typing.collect())
