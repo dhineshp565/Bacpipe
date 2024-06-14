@@ -43,8 +43,6 @@ for (i in sampleid){
   
   cat("####", i, "\n")
   card_id <- (paste(i,"_CARD.txt",sep=""))
-  geno_id <- (paste(i,"_genotyping_results.csv",sep=""))
-  sero_id <- (paste(i,"_serotyping_results.csv",sep=""))
   viro_id <- (paste(i,"_VF.txt",sep=""))
   ice_id <- (paste(i,"_ICE.txt",sep=""))
   type_id <- (paste(i,"_type.txt",sep=""))

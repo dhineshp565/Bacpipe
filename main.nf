@@ -146,8 +146,6 @@ process summarize_csv {
 	publishDir "${params.out_dir}/summary",mode:"copy"
 	input:
 	path(card)
-	path(geno)
-	path(sero)
 	path(vf)
 	path(ice)
 	path (type)
@@ -157,8 +155,6 @@ process summarize_csv {
 	"""
 	mkdir typing_results
 	cp ${card} typing_results/
-	cp ${geno} typing_results/
-	cp ${sero} typing_results/
 	cp ${vf} typing_results/
 	cp ${ice} typing_results/
 	cp ${type} typing_results/
@@ -219,7 +215,7 @@ workflow {
 	//seqkit_typing(dragonflye.out.assembly,geno_primerfile,sero_primerfile,vf_primerfile)
 	rmdfile=file("${baseDir}/MH_tabbed_report.Rmd")
 	// summarize all AMR abd typing data
-	summarize_csv(abricate.out.cardtxt.collect(),seqkit_typing.out.geno.collect(),seqkit_typing.out.sero.collect(),abricate.out.vf.collect(),abricate.out.ice.collect(),abricate.out.typing.collect())
+	summarize_csv(abricate.out.cardtxt.collect(),abricate.out.vf.collect(),abricate.out.ice.collect(),abricate.out.typing.collect())
 	// make rmarkdown report from the the summarised files
 	make_report(rmdfile,summarize_csv.out,make_csv.out)
 }
